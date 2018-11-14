@@ -1,0 +1,95 @@
+#import necessary packages and modules
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.integrate import quad
+from scipy.optimize import fsolve
+
+#Define the reduced form of the van der Waal equation
+def vdw(Vr):
+    return (8.0*Tr) / (3.0*Vr - 1) - (3.0/Vr**2) 
+
+
+Tr = 0.9 #A reduced temperature below critical temperature
+Vr = np.linspace(0.5, 4, 100) #list of reduced volume
+Pr = vdw(Vr)  #vector of reduced pressure
+
+plt.plot(Vr, Pr)
+plt.xlabel('$V_R$')
+plt.ylabel('$P_R$')
+plt.show()
+
+#Construct a straight line p_t = constant
+y = 0.60
+
+plt.plot(Vr, Pr) #plot the curve
+plt.plot([0.5, 4.0], [y, y], 'k--') 
+plt.xlabel('$V_R$')
+plt.ylabel('$P_R$')
+plt.show()
+
+
+##The areas between the line and the curve in the range V1 to V2 and V2 to V3 must be equal.
+
+#We find the intersection of the van der Waal equation curve with the horizontal line
+
+#polynomial form of the van der Waal equation
+vdw_poly = [1.0, -1. / 3.0 * (1.0 + 8.0 * Tr / y), 3.0 / y, - 1.0 / y]
+v = np.roots(vdw_poly) #roots of the van der Waal equation at the Pr = Pt
+v.sort()
+print(v)
+
+
+plt.plot(Vr, Pr) #plot the curve
+plt.plot([0.5, 4.0], [y, y], 'k--')   #horizontal line intersecting the curve   
+plt.plot(v[0], y, 'bo', v[1], y, 'bo', v[2], y, 'bo')  #plot the points where the line and the curve intersects
+plt.xlabel('$V_R$')
+plt.ylabel('$P_R$')
+plt.show()
+
+
+
+##computing areas
+
+#area under the line minus the are under the curve
+A1, e1 = (v[1] - v[0]) * y - quad(vdw,  v[0], v[1]) 
+#area under the curve minus the area under the line
+A2, e2 = quad(vdw, v[1], v[2]) - (v[2] - v[1])* y 
+
+
+def equal_area(y):
+    vdw_poly = [1, -1.0 / 3 * ( 1.0 + 8.0 * Tr / y), 3.0 / y,  -1.0 / y]
+    v = np.roots(vdw_poly)
+    v.sort()
+    A1 = (v[1] - v[0]) * y - quad(vdw, v[0], v[1])
+    A2 = quad(vdw, v[1], v[2]) - (v[2] - v[1]) * y
+    return  A1 - A2
+
+#Solve for the areas
+y_eq, = fsolve(equal_area, y)
+print (y_eq)
+
+vdw_poly = [1, -1.0 / 3 * ( 1.0 + 8.0 * Tr / y_eq), 3.0 / y_eq,  -1.0 / y_eq]
+v = np.roots(vdw_poly)
+v.sort()
+
+A1, e1 = (v[1] - v[0]) * y_eq - quad(vdw,  v[0], v[1])
+A2, e2 = quad(vdw, v[1], v[2]) - (v[2] - v[1]) * y_eq
+print (A1, A2) #to check if the areas are equal
+
+fig = plt.gcf()
+ax = fig.add_subplot(111)
+
+ax.plot(Vr,Pr)
+plt.plot([0.5, 4.0], [y, y], 'k--')     
+ax.plot(v[0], y, 'bo', v[1], y, 'bo', v[2], y, 'bo') 
+hline = np.ones(Vr.size) * y_eq
+
+ax.plot(Vr, hline)
+ax.fill_between(Vr, hline, Pr, where=(Vr >= v[0]) & (Vr <= v[1]), facecolor='gray')
+ax.fill_between(Vr, hline, Pr, where=(Vr >= v[1]) & (Vr <= v[2]), facecolor='gray')
+
+plt.text(v[0], 1, 'A1 = {0}'.format(A1))
+plt.text(v[2], 1, 'A2 = {0}'.format(A2))
+plt.xlabel('$V_R$')
+plt.ylabel('$P_R$')
+plt.title('$T_R$ = 0.9')
